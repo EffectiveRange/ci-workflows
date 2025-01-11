@@ -18,8 +18,8 @@ on:
      default: 'amd64'
      description: 'default architecture run sanitizer builds on'
   secrets:
-   access-token:
-     required: false
+    access-token:
+        required: true
 
 
 concurrency:
@@ -42,7 +42,7 @@ jobs:
       discussions: write
     steps:
       - 
-        name: Checkout
+        name: Checkout with token
         uses: actions/checkout@v4
         with:
           submodules: true
