@@ -1,0 +1,208 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: CI/CD
+
+on:
+ workflow_call:
+  inputs:
+   sanitizer-arch:
+     required: false
+     type: string
+     default: 'amd64'
+     description: 'default architecture run sanitizer builds on'
+  secrets:
+   access-token:
+     required: false
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env: 
+  GITHUB_TOKEN: ${{github.token}}
+  GITHUB_ACTION: "TRUE"
+
+jobs:
+  sanitize:
+    name: Run tests with sanitizer
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+          sanitizer: ["asan", "tsan", "ubsan", "debug"]
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.access-token }}
+      - 
+        name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Extract project name
+        id: extract
+        run: |
+            echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - 
+        name: Build Project
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{github.workspace}}"
+          configFile: .devcontainer/${{inputs.sanitizer-arch}}-container/devcontainer.json
+          push: never
+          runCmd: |
+            rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}" 
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
+            cd "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
+            cmake -DCMAKE_BUILD_TYPE=${{matrix.sanitizer}} ../
+            cmake --build . -j
+            ctest . --verbose --timeout 600
+            if [ $? -ne 0 ]; then
+              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              exit 1
+            fi
+  coverage:
+    name: Run coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+      pull-requests: write 
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.access-token }}
+      - 
+        name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Extract project name
+        id: extract
+        run: |
+            echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - 
+        name: Build Project
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{github.workspace}}"
+          configFile: .devcontainer/${{inputs.sanitizer-arch}}-container/devcontainer.json
+          push: never
+          runCmd: |
+            rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build" 
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cd "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cmake -DCMAKE_BUILD_TYPE=coverage ../
+            cmake --build . -j
+            ctest . --verbose --timeout 600
+            if [ $? -ne 0 ]; then
+              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              exit 1
+            fi
+            mkdir ../coverage
+            cd ../coverage
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --lcov coverage.lcov
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --html-single-page --html-theme github.dark-green --html-details coverage-report.html
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --no-html-self-contained --html coverage-summary.html
+            markdownify coverage-summary.html > coverage-summary.md
+            sed -i -e 's/| File | Lines | | | Functions | | Branches | |/| File | Lines | | Functions | | Branches ||\n| --- | --- | --- | --- | --- | --- | --- |/' coverage-summary.md
+      -
+        name: Post coverage comment
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: coverage/coverage-summary.md
+          comment-tag: coverage_summary
+      -
+        name: Upload coverage artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        id: coverage-artifact
+        with:
+          name: coverage-report
+          path: coverage/coverage-report.html
+      -
+        name: Post coverage report link
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: "Detailed coverage report downloadable from [here.](${{steps.coverage-artifact.outputs.artifact-url}})"
+          comment-tag: coverage_report_link
+      -
+        name: Release Coverage Result
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            ./coverage/coverage-report.html
+
+  
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+            arch: ["armhf", "amd64", "arm64"]
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.ACTIONS_RO_TOKEN }}
+      - 
+        name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Extract project name
+        id: extract
+        run: |
+           echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - 
+        name: Build Project
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{github.workspace}}"
+          configFile: .devcontainer/${{matrix.arch}}-container/devcontainer.json
+          push: never
+          runCmd: |
+            rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build" 
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cd "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../
+            cmake --build . -j
+            ctest . --verbose --timeout 600
+            if [ $? -ne 0 ]; then
+              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              exit 1
+            fi
+            echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
+            cpack .
+      - 
+        name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            dist/*.*deb
