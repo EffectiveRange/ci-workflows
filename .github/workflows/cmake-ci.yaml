@@ -17,6 +17,11 @@ on:
      type: string
      default: 'amd64'
      description: 'default architecture run sanitizer builds on'
+   test-timeout:
+     required: false
+     type: number
+     description: 'ctest timeout in seconds'
+     default: 300
   secrets:
     access-token:
         required: false
@@ -77,7 +82,7 @@ jobs:
             cd "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
             cmake -DCMAKE_BUILD_TYPE=${{matrix.sanitizer}} ../
             cmake --build . -j
-            ctest . --verbose --timeout 600
+            ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
               exit 1
@@ -126,7 +131,7 @@ jobs:
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
             cmake -DCMAKE_BUILD_TYPE=coverage ../
             cmake --build . -j
-            ctest . --verbose --timeout 600
+            ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
               exit 1
@@ -217,7 +222,7 @@ jobs:
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
             cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../
             cmake --build . -j
-            ctest . --verbose --timeout 600
+            ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
               exit 1
