@@ -19,7 +19,7 @@ on:
      description: 'default architecture run sanitizer builds on'
   secrets:
     access-token:
-        required: true
+        required: false
 
 
 concurrency:
@@ -34,6 +34,8 @@ jobs:
   sanitize:
     name: Run tests with sanitizer
     runs-on: ubuntu-latest
+    env:
+        token: ${{ secrets.access-token }}
     strategy:
       matrix:
           sanitizer: ["asan", "tsan", "ubsan", "debug"]
@@ -44,9 +46,16 @@ jobs:
       - 
         name: Checkout with token
         uses: actions/checkout@v4
+        if: ${{env.token != ''}}
         with:
           submodules: true
-          token: ${{ secrets.access-token }}
+          token: ${{ secrets.access-token }}      
+      - 
+        name: Checkout with default token
+        uses: actions/checkout@v4
+        if: ${{env.token == ''}}
+        with:
+            submodules: true
       - 
         name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
@@ -80,13 +89,22 @@ jobs:
       contents: write
       discussions: write
       pull-requests: write 
+    env:
+        token: ${{ secrets.access-token }}
     steps:
       - 
-        name: Checkout
+        name: Checkout with token
         uses: actions/checkout@v4
+        if: ${{env.token != ''}}
         with:
-          submodules: true
-          token: ${{ secrets.access-token }}
+            submodules: true
+            token: ${{ secrets.access-token }}      
+      - 
+        name: Checkout with default token
+        uses: actions/checkout@v4
+        if: ${{env.token == ''}}
+        with:
+            submodules: true
       - 
         name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
@@ -162,13 +180,22 @@ jobs:
     permissions:
       contents: write
       discussions: write
+    env:
+        token: ${{ secrets.access-token }}
     steps:
       - 
-        name: Checkout
+        name: Checkout with token
         uses: actions/checkout@v4
+        if: ${{env.token != ''}}
         with:
-          submodules: true
-          token: ${{ secrets.ACTIONS_RO_TOKEN }}
+            submodules: true
+            token: ${{ secrets.access-token }}      
+      - 
+        name: Checkout with default token
+        uses: actions/checkout@v4
+        if: ${{env.token == ''}}
+        with:
+            submodules: true
       - 
         name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
