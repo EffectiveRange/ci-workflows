@@ -12,6 +12,11 @@ name: CI/CD
 on:
  workflow_call:
   inputs:
+   build-arch:
+      required: false
+      type: string
+      default: '["armhf", "amd64", "arm64"]'
+      description: 'default architecture run builds on (must be valid JSON array format)'
    sanitizer-arch:
      required: false
      type: string
@@ -180,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix:
-            arch: ["armhf", "amd64", "arm64"]
+            arch: ${{ fromJson(inputs.build-arch) }}
     permissions:
       contents: write
       discussions: write
