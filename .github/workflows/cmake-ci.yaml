@@ -12,24 +12,34 @@ name: CI/CD
 on:
  workflow_call:
   inputs:
-   build-arch:
+    build-arch:
       required: false
       type: string
       default: '["armhf", "amd64", "arm64"]'
       description: 'default architecture run builds on (must be valid JSON array format)'
-   sanitizer-arch:
-     required: false
-     type: string
-     default: 'amd64'
-     description: 'default architecture run sanitizer builds on'
-   test-timeout:
-     required: false
-     type: number
-     description: 'ctest timeout in seconds'
-     default: 300
+    sanitizer-arch:
+      required: false
+      type: string
+      default: 'amd64'
+      description: 'default architecture run sanitizer builds on'
+    test-timeout:
+      required: false
+      type: number
+      description: 'ctest timeout in seconds'
+      default: 300
+    run-sanitizers:
+      required: false
+      type: boolean
+      description: 'run sanitizer builds'
+      default: true
+    run-coverage:
+      required: false
+      type: boolean
+      description: 'run coverage build'
+      default: true
   secrets:
     access-token:
-        required: false
+      required: false
 
 
 concurrency:
@@ -44,6 +54,7 @@ jobs:
   sanitize:
     name: Run tests with sanitizer
     runs-on: ubuntu-latest
+    if: ${{ inputs.run-sanitizers }}
     env:
         token: ${{ secrets.access-token }}
     strategy:
@@ -95,6 +106,7 @@ jobs:
   coverage:
     name: Run coverage
     runs-on: ubuntu-latest
+    if: ${{ inputs.run-coverage }}
     permissions:
       contents: write
       discussions: write
