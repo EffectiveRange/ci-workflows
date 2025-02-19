@@ -97,7 +97,7 @@ jobs:
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
             cmake -DCMAKE_BUILD_TYPE=${{matrix.sanitizer}} ../
-            cmake --build . -j
+            cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
@@ -147,7 +147,7 @@ jobs:
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
             cmake -DCMAKE_BUILD_TYPE=coverage ../
-            cmake --build . -j
+            cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
@@ -237,7 +237,7 @@ jobs:
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
             cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ../
-            cmake --build . -j
+            cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
