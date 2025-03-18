@@ -245,7 +245,7 @@ jobs:
             fi
             echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
             cpack .
-            DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)-"
+            DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)_"
             for pkg in $(find /workspaces/${{steps.extract.outputs.proj}}/dist -name *.*deb)
             do
               mv -vf $pkg $(dirname $pkg)/${DISTRO_VER}$(basename $pkg)
