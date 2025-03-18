@@ -12,16 +12,16 @@ name: CI/CD
 on:
  workflow_call:
   inputs:
-    build-arch:
+    build-version:
       required: false
       type: string
-      default: '["armhf", "amd64", "arm64"]'
-      description: 'default architecture run builds on (must be valid JSON array format)'
-    sanitizer-arch:
+      default: '["armhf-bookworm", "amd64-bookworm", "arm64-bookworm"]'
+      description: 'default architecture and distro version to run builds on (must be valid JSON array format)'
+    sanitizer-version:
       required: false
       type: string
-      default: 'amd64'
-      description: 'default architecture run sanitizer builds on'
+      default: 'amd64-bookworm'
+      description: 'default architecture and distro version to run sanitizer builds on'
     test-timeout:
       required: false
       type: number
@@ -90,7 +90,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{github.workspace}}"
-          configFile: .devcontainer/${{inputs.sanitizer-arch}}-container/devcontainer.json
+          configFile: .devcontainer/${{inputs.sanitizer-version}}-container/devcontainer.json
           push: never
           runCmd: |
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}" 
@@ -140,7 +140,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{github.workspace}}"
-          configFile: .devcontainer/${{inputs.sanitizer-arch}}-container/devcontainer.json
+          configFile: .devcontainer/${{inputs.sanitizer-version}}-container/devcontainer.json
           push: never
           runCmd: |
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build" 
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix:
-            arch: ${{ fromJson(inputs.build-arch) }}
+            arch: ${{ fromJson(inputs.build-version) }}
     permissions:
       contents: write
       discussions: write
@@ -245,6 +245,11 @@ jobs:
             fi
             echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
             cpack .
+            DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)-"
+            for pkg in $(find /workspaces/${{steps.extract.outputs.proj}}/dist -name *.*deb)
+            do
+              mv $pkg $(dirname $file)/${DISTRO_VER}$(basename $pkg)
+            done
       - 
         name: Release
         uses: softprops/action-gh-release@v2
