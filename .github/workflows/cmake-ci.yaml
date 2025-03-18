@@ -248,7 +248,7 @@ jobs:
             DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)-"
             for pkg in $(find /workspaces/${{steps.extract.outputs.proj}}/dist -name *.*deb)
             do
-              mv $pkg $(dirname $file)/${DISTRO_VER}$(basename $pkg)
+              mv $pkg $(dirname $pkg)/${DISTRO_VER}$(basename $pkg)
             done
       - 
         name: Release
