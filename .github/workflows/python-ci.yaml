@@ -119,6 +119,12 @@ jobs:
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ env.GITHUB_TOKEN }}
+
       - name: Extract version
         id: set-version
         run: |
