@@ -10,43 +10,43 @@
 name: CI/CD
 
 on:
- workflow_call:
-  inputs:
-    build-version:
-      required: false
-      type: string
-      default: '["armhf-bookworm", "amd64-bookworm", "arm64-bookworm"]'
-      description: 'default architecture and distro version to run builds on (must be valid JSON array format)'
-    sanitizer-version:
-      required: false
-      type: string
-      default: 'amd64-bookworm'
-      description: 'default architecture and distro version to run sanitizer builds on'
-    test-timeout:
-      required: false
-      type: number
-      description: 'ctest timeout in seconds'
-      default: 300
-    run-sanitizers:
-      required: false
-      type: boolean
-      description: 'run sanitizer builds'
-      default: true
-    run-coverage:
-      required: false
-      type: boolean
-      description: 'run coverage build'
-      default: true
-  secrets:
-    access-token:
-      required: false
+  workflow_call:
+    inputs:
+      build-version:
+        required: false
+        type: string
+        default: '["armhf-bookworm", "amd64-bookworm", "arm64-bookworm"]'
+        description: 'default architecture and distro version to run builds on (must be valid JSON array format)'
+      sanitizer-version:
+        required: false
+        type: string
+        default: 'amd64-bookworm'
+        description: 'default architecture and distro version to run sanitizer builds on'
+      test-timeout:
+        required: false
+        type: number
+        description: 'ctest timeout in seconds'
+        default: 300
+      run-sanitizers:
+        required: false
+        type: boolean
+        description: 'run sanitizer builds'
+        default: true
+      run-coverage:
+        required: false
+        type: boolean
+        description: 'run coverage build'
+        default: true
+    secrets:
+      access-token:
+        required: false
 
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
 
-env: 
+env:
   GITHUB_TOKEN: ${{github.token}}
   GITHUB_ACTION: "TRUE"
 
@@ -56,37 +56,32 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.run-sanitizers }}
     env:
-        token: ${{ secrets.access-token }}
+      token: ${{ secrets.access-token }}
     strategy:
       matrix:
-          sanitizer: ["asan", "tsan", "ubsan", "debug"]
+        sanitizer: [ "asan", "tsan", "ubsan", "debug" ]
     permissions:
       contents: write
       discussions: write
     steps:
-      - 
-        name: Checkout with token
+      - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
         with:
           submodules: true
-          token: ${{ secrets.access-token }}      
-      - 
-        name: Checkout with default token
+          token: ${{ secrets.access-token }}
+      - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
-            submodules: true
-      - 
-        name: Set up QEMU for multi-architecture builds
+          submodules: true
+      - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
-      -
-        name: Extract project name
+      - name: Extract project name
         id: extract
         run: |
-            echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
-      - 
-        name: Build Project
+          echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{github.workspace}}"
@@ -110,33 +105,28 @@ jobs:
     permissions:
       contents: write
       discussions: write
-      pull-requests: write 
+      pull-requests: write
     env:
-        token: ${{ secrets.access-token }}
+      token: ${{ secrets.access-token }}
     steps:
-      - 
-        name: Checkout with token
+      - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
         with:
-            submodules: true
-            token: ${{ secrets.access-token }}      
-      - 
-        name: Checkout with default token
+          submodules: true
+          token: ${{ secrets.access-token }}
+      - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
-            submodules: true
-      - 
-        name: Set up QEMU for multi-architecture builds
+          submodules: true
+      - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
-      -
-        name: Extract project name
+      - name: Extract project name
         id: extract
         run: |
-            echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
-      - 
-        name: Build Project
+          echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{github.workspace}}"
@@ -150,7 +140,7 @@ jobs:
             cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
-              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              echo "::error title=UNIT-TESTS-FAILED::ctest exited with $?"
               exit 1
             fi
             mkdir ../coverage
@@ -160,29 +150,25 @@ jobs:
             gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --no-html-self-contained --html coverage-summary.html
             markdownify coverage-summary.html > coverage-summary.md
             sed -i -e 's/| File | Lines | | | Functions | | Branches | |/| File | Lines | | Functions | | Branches ||\n| --- | --- | --- | --- | --- | --- | --- |/' coverage-summary.md
-      -
-        name: Post coverage comment
+      - name: Post coverage comment
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
           file-path: coverage/coverage-summary.md
           comment-tag: coverage_summary
-      -
-        name: Upload coverage artifact
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         id: coverage-artifact
         with:
           name: coverage-report
           path: coverage/coverage-report.html
-      -
-        name: Post coverage report link
+      - name: Post coverage report link
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
           message: "Detailed coverage report downloadable from [here.](${{steps.coverage-artifact.outputs.artifact-url}})"
           comment-tag: coverage_report_link
-      -
-        name: Release Coverage Result
+      - name: Release Coverage Result
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -190,43 +176,38 @@ jobs:
           generate_release_notes: true
           files: |
             ./coverage/coverage-report.html
-
+  
   
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
     strategy:
-        matrix:
-            arch: ${{ fromJson(inputs.build-version) }}
+      matrix:
+        arch: ${{ fromJson(inputs.build-version) }}
     permissions:
       contents: write
       discussions: write
     env:
-        token: ${{ secrets.access-token }}
+      token: ${{ secrets.access-token }}
     steps:
-      - 
-        name: Checkout with token
+      - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
         with:
-            submodules: true
-            token: ${{ secrets.access-token }}      
-      - 
-        name: Checkout with default token
+          submodules: true
+          token: ${{ secrets.access-token }}
+      - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
-            submodules: true
-      - 
-        name: Set up QEMU for multi-architecture builds
+          submodules: true
+      - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
-      -
-        name: Extract project name
+      - name: Extract project name
         id: extract
         run: |
-           echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
-      - 
-        name: Build Project
+          echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+      - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{github.workspace}}"
@@ -240,7 +221,7 @@ jobs:
             cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then
-              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              echo "::error title=UNIT-TESTS-FAILED::ctest exited with $?"
               exit 1
             fi
             echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
@@ -250,8 +231,7 @@ jobs:
             do
               mv -vf $pkg $(dirname $pkg)/${DISTRO_VER}$(basename $pkg)
             done
-      - 
-        name: Release
+      - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
