@@ -50,8 +50,8 @@ on:
       package-type:
         required: false
         type: string
-        default: '["wheel", "fpm-deb"]'
-        description: 'Packaging type (must be valid JSON array format)'
+        default: 'wheel, fpm-deb'
+        description: 'Packaging types'
     secrets:
       access-token:
         required: false
@@ -138,7 +138,7 @@ jobs:
 
   build_wheel:
     name: Create wheel package
-    if: contains('${{ inputs.package-type }}', 'wheel')
+    if: ${{ contains(inputs.package-type, 'wheel') }}
     runs-on: ubuntu-latest
     needs: prepare
     permissions:
@@ -166,10 +166,7 @@ jobs:
           subFolder: "${{ github.workspace }}"
           configFile: .devcontainer/amd64-bookworm-container/devcontainer.json
           push: never
-          runCmd: |
-            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
-            pip install .
-            pack_python . -s wheel
+          runCmd: pack_python . -s wheel
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
@@ -181,7 +178,7 @@ jobs:
 
   build_fpm-deb:
     name: Create debian package with FPM
-    if: contains('${{ inputs.package-type }}', 'fpm-deb')
+    if: ${{ contains(inputs.package-type, 'fpm-deb') }}
     runs-on: ubuntu-latest
     needs: prepare
     strategy:
@@ -213,10 +210,8 @@ jobs:
           configFile: .devcontainer/amd64-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
-            pip install .
             pack_python . -s fpm-deb
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)_"
+            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             for package in $(find dist -name *.deb)
             do
               mv -vf $package $(dirname $pkg)/${DISTRIBUTION}_$(basename $package)
@@ -232,7 +227,7 @@ jobs:
 
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
-    if: contains('${{ inputs.package-type }}', 'dh-virtualenv')
+    if: ${{ contains(inputs.package-type, 'dh-virtualenv') }}
     runs-on: ubuntu-latest
     needs: prepare
     strategy:
@@ -268,10 +263,8 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
-            pip install .
             pack_python . -s dh-virtualenv
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)_"
+            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             for package in $(find dist -name *.deb)
             do
               mv -vf $package $(dirname $pkg)/${DISTRIBUTION}_$(basename $package)
