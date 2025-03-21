@@ -98,9 +98,11 @@ jobs:
             python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
             pip install mypy flake8 pytest pytest-timeout
             pip install .
+            
             mypy --install-types --non-interactive || true
             mypy || { echo "mypy exited with $?"; exit 1; }
             flake8 || { echo "flake exited with $?"; exit 1; }
+            
             if [ ${{ inputs.coverage-enabled }} == true ]; then
               pip install coverage
               coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
@@ -272,7 +274,7 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            WORKSPACE="/workspaces/${{ github.workspace }}"
+            WORKSPACE="/workspaces/$(basename ${{ github.workspace }})
             BUILDROOT="/var/chroot/buildroot"
             
             rsync -av --exclude ".git" --mkpath "$WORKSPACE/" "$BUILDROOT$WORKSPACE/"
