@@ -179,7 +179,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_wheel
           path: dist/*.whl
           if-no-files-found: error
 
@@ -228,7 +228,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_fpm-deb_${{ matrix.distribution }}
           path: dist/*.deb
           if-no-files-found: error
 
@@ -281,7 +281,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_dh-virtualenv_${{ matrix.architecture }}_${{ matrix.distribution }}
           path: dist/*.deb
           if-no-files-found: error
 
@@ -321,4 +321,4 @@ jobs:
           github_token: ${{ env.GITHUB_TOKEN }}
 
       - name: Create release
-        uses: EffectiveRange/version-release-github-action@v1
+        uses: EffectiveRange/version-release-github-action@v2
