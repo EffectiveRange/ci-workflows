@@ -282,7 +282,7 @@ jobs:
             schroot -p -c buildroot -- apt update && apt install -y python3-stdeb packaging-tools
             schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             
-            rsync -av --include "wifi-manager_*.deb" --exclude "*" --mkpath "$BUILDROOT$WORKSPACE/dist/" "$WORKSPACE/dist/"
+            rsync -av --include "*_*.deb" --exclude "*" --mkpath "$BUILDROOT$WORKSPACE/dist/" "$WORKSPACE/dist/"
             
             DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             
