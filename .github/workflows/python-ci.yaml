@@ -277,18 +277,18 @@ jobs:
             WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
             BUILDROOT="/var/chroot/buildroot"
             
-            rsync -av --exclude ".git" --mkpath "$WORKSPACE/" "$BUILDROOT$WORKSPACE/"
+            sudo rsync -av --exclude ".git" --mkpath "$WORKSPACE/" "$BUILDROOT$WORKSPACE/"
             
-            schroot -p -c buildroot -- apt update && apt install -y python3-stdeb packaging-tools
-            schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
+            sudo schroot -p -c buildroot -- apt update && apt install -y python3-stdeb packaging-tools
+            sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             
-            rsync -av --include "*_*.deb" --exclude "*" --mkpath "$BUILDROOT$WORKSPACE/dist/" "$WORKSPACE/dist/"
+            sudo rsync -av --include "*_*.deb" --exclude "*" --mkpath "$BUILDROOT$WORKSPACE/dist/" "$WORKSPACE/dist/"
             
             DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             
             for package in $(find dist -name *.deb)
             do
-              mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
             done
 
       - name: Upload package
