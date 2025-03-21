@@ -274,7 +274,7 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
+            WORKSPACE="/workspaces/$(basename $GITHUB_WORKSPACE)"
             BUILDROOT="/var/chroot/buildroot"
             
             rsync -av --exclude ".git" --mkpath "$WORKSPACE/" "$BUILDROOT$WORKSPACE/"
