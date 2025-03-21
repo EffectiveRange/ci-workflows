@@ -12,6 +12,11 @@ name: CI/CD
 on:
   workflow_call:
     inputs:
+      test-enabled:
+        required: false
+        type: boolean
+        default: true
+        description: 'Should run tests?'
       test-architecture:
         required: false
         type: string
@@ -25,18 +30,18 @@ on:
       test-timeout:
         required: false
         type: number
-        description: 'Test timeout in seconds'
         default: 10
+        description: 'Test timeout in seconds'
       coverage-enabled:
         required: false
         type: boolean
-        description: 'Should run with coverage?'
         default: true
+        description: 'Should run with coverage?'
       coverage-threshold:
         required: false
         type: number
-        description: 'Minimum coverage threshold'
         default: 80
+        description: 'Minimum coverage threshold'
       package-architecture:
         required: false
         type: string
@@ -67,6 +72,7 @@ env:
 jobs:
   test:
     name: Run tests
+    if: ${{ inputs.test-enabled }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -111,6 +117,7 @@ jobs:
 
   prepare:
     name: Prepare release
+    if: always()
     runs-on: ubuntu-latest
     needs: test
     permissions:
