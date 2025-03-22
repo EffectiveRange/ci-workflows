@@ -12,6 +12,11 @@ name: CI/CD
 on:
   workflow_call:
     inputs:
+      test-enabled:
+        required: false
+        type: boolean
+        default: true
+        description: 'Should run tests?'
       test-architecture:
         required: false
         type: string
@@ -25,18 +30,18 @@ on:
       test-timeout:
         required: false
         type: number
-        description: 'Test timeout in seconds'
         default: 10
+        description: 'Test timeout in seconds'
       coverage-enabled:
         required: false
         type: boolean
-        description: 'Should run with coverage?'
         default: true
+        description: 'Should run with coverage?'
       coverage-threshold:
         required: false
         type: number
-        description: 'Minimum coverage threshold'
         default: 80
+        description: 'Minimum coverage threshold'
       package-architecture:
         required: false
         type: string
@@ -50,8 +55,8 @@ on:
       package-type:
         required: false
         type: string
-        default: '["wheel", "fpm-deb"]'
-        description: 'Packaging type (must be valid JSON array format)'
+        default: 'wheel, fpm-deb'
+        description: 'Packaging types'
     secrets:
       access-token:
         required: false
@@ -67,6 +72,7 @@ env:
 jobs:
   test:
     name: Run tests
+    if: ${{ inputs.test-enabled }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -89,40 +95,52 @@ jobs:
           configFile: .devcontainer/${{ inputs.test-architecture }}-${{ inputs.test-distribution }}-container/devcontainer.json
           push: never
           runCmd: |
+            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
             pip install mypy flake8 pytest pytest-timeout
             pip install .
-            mypy --install-types --non-interactive || true && mypy
-            flake8
+            
+            mypy --install-types --non-interactive || true
+            mypy || { echo "mypy exited with $?"; exit 1; }
+            flake8 || { echo "flake exited with $?"; exit 1; }
+            
             if [ ${{ inputs.coverage-enabled }} == true ]; then
               pip install coverage
-              coverage run -m pytest --timeout=${{ inputs.test-timeout }}
+              coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
             else
-              pytest --timeout=${{ inputs.test-timeout }}
+              pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
             fi
 
-      - if: ${{ inputs.coverage-enabled && github.event_name == 'pull_request' }}
-        name: Coverage comment
+      - name: Coverage comment
+        if: ${{ inputs.coverage-enabled && github.event_name == 'pull_request' }}
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
-      - if: ${{ inputs.coverage-enabled }}
-        name: Enforce minimum coverage
+      - name: Enforce minimum coverage
+        if: ${{ inputs.coverage-enabled }}
         id: coverage-gate
         run: |
+          python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
           pip install coverage
           coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
   prepare:
     name: Prepare release
-    runs-on: ubuntu-latest
+    if: always()
     needs: test
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       discussions: write
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ env.GITHUB_TOKEN }}
+
       - name: Extract version
         id: set-version
         run: |
@@ -130,15 +148,15 @@ jobs:
           if [[ "${GITHUB_REF#refs/tags/v}" =~ $VERSION_REGEX ]]; then
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           else
-            echo "Error: Invalid version tag ${GITHUB_REF#refs/tags/}"
-            exit 1
+            VERSION=$(grep -oP "version=['\"]\K[^\"]+(?=['\"])" setup.py)
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
           fi
 
   build_wheel:
-    if: contains('${{ inputs.package-type }}', 'wheel')
     name: Create wheel package
-    runs-on: ubuntu-latest
+    if: always() && contains(inputs.package-type, 'wheel')
     needs: prepare
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       discussions: write
@@ -164,21 +182,21 @@ jobs:
           subFolder: "${{ github.workspace }}"
           configFile: .devcontainer/amd64-bookworm-container/devcontainer.json
           push: never
-          runCmd: pack_python . -s wheel
+          runCmd: pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
       - name: Upload package
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
-        if: ${{ !startsWith(github.ref, 'refs/pull/') }}
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_wheel
           path: dist/*.whl
           if-no-files-found: error
 
   build_fpm-deb:
-    if: contains('${{ inputs.package-type }}', 'fpm-deb')
     name: Create debian package with FPM
-    runs-on: ubuntu-latest
+    if: always() && contains(inputs.package-type, 'fpm-deb')
     needs: prepare
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         distribution: ${{ fromJson(inputs.package-distribution) }}
@@ -208,26 +226,28 @@ jobs:
           configFile: .devcontainer/amd64-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            pack_python . -s fpm-deb
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)_"
+            pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
+            
+            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
+            
             for package in $(find dist -name *.deb)
             do
-              mv -vf $package $(dirname $pkg)/${DISTRIBUTION}_$(basename $package)
+              mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
             done
 
       - name: Upload package
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
-        if: ${{ !startsWith(github.ref, 'refs/pull/') }}
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_fpm-deb_${{ matrix.distribution }}
           path: dist/*.deb
           if-no-files-found: error
 
   build_dh-virtualenv:
-    if: contains('${{ inputs.package-type }}', 'dh-virtualenv')
     name: Create debian package with dh-virtualenv
-    runs-on: ubuntu-latest
+    if: always() && contains(inputs.package-type, 'dh-virtualenv')
     needs: prepare
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         architecture: ${{ fromJson(inputs.package-architecture) }}
@@ -261,25 +281,41 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            pack_python . -s dh-virtualenv
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)_"
+            if [ ${{ matrix.architecture }} == "amd64" ]; then
+              pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
+            else
+              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
+              BUILDROOT="/var/chroot/buildroot"
+            
+              sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
+            
+              sudo schroot -p -c buildroot -- apt update
+              sudo schroot -p -c buildroot -- apt install -y python3-stdeb packaging-tools
+              sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
+            
+              sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
+            
+              DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
+            fi
+            
             for package in $(find dist -name *.deb)
             do
-              mv -vf $package $(dirname $pkg)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
             done
 
       - name: Upload package
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
-        if: ${{ !startsWith(github.ref, 'refs/pull/') }}
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}_dh-virtualenv_${{ matrix.architecture }}_${{ matrix.distribution }}
           path: dist/*.deb
           if-no-files-found: error
 
   release:
     name: Create release
+    if: always() && startsWith(github.ref, 'refs/tags/')
+    needs: [ prepare, build_wheel, build_fpm-deb, build_dh-virtualenv ]
     runs-on: ubuntu-latest
-    needs: prepare
     permissions:
       contents: write
       discussions: write
@@ -307,9 +343,8 @@ jobs:
 
       - name: Push changes
         uses: ad-m/github-push-action@master
-        if: ${{ !startsWith(github.ref, 'refs/pull/') && success() }}
         with:
           github_token: ${{ env.GITHUB_TOKEN }}
 
       - name: Create release
-        uses: EffectiveRange/version-release-github-action@v1
+        uses: EffectiveRange/version-release-github-action@v2
