@@ -282,6 +282,8 @@ jobs:
           push: never
           runCmd: |
             if [ ${{ matrix.architecture }} == "amd64" ]; then
+              sudo apt update
+              sudo apt install -y python3-stdeb packaging-tools
               pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             else
               WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
@@ -294,9 +296,9 @@ jobs:
               sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             
               sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
-            
-              DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             fi
+            
+            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
             
             for package in $(find dist -name *.deb)
             do
