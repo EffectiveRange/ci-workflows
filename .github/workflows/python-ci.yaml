@@ -282,7 +282,8 @@ jobs:
             
               sudo rsync -av --exclude ".git" --mkpath "$WORKSPACE/" "$BUILDROOT$WORKSPACE/"
             
-              sudo schroot -p -c buildroot -- apt update && apt install -y python3-stdeb packaging-tools
+              sudo schroot -p -c buildroot -- apt update
+              sudo schroot -p -c buildroot -- apt install -y python3-stdeb packaging-tools
               sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             
               sudo rsync -av --include "*_*.deb" --exclude "*" --mkpath "$BUILDROOT$WORKSPACE/dist/" "$WORKSPACE/dist/"
