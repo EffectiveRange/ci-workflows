@@ -106,7 +106,6 @@ jobs:
             if [ ${{ inputs.coverage-enabled }} == true ]; then
               pip install coverage
               coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
-              coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }} || { echo "coverage exited with $?"; exit 1; }
             else
               pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
             fi
@@ -116,6 +115,14 @@ jobs:
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+
+      - name: Enforce minimum coverage
+        if: ${{ inputs.coverage-enabled }}
+        id: coverage-gate
+        run: |
+          python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
+          pip install coverage
+          coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
   prepare:
     name: Prepare release
