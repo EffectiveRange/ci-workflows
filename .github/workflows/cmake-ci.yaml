@@ -41,7 +41,6 @@ on:
       access-token:
         required: false
 
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
@@ -70,17 +69,21 @@ jobs:
         with:
           submodules: true
           token: ${{ secrets.access-token }}
+
       - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
           submodules: true
+
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
+
       - name: Extract project name
         id: extract
         run: |
           echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+
       - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
@@ -98,6 +101,7 @@ jobs:
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
               exit 1
             fi
+
   coverage:
     name: Run coverage
     runs-on: ubuntu-latest
@@ -115,17 +119,21 @@ jobs:
         with:
           submodules: true
           token: ${{ secrets.access-token }}
+
       - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
           submodules: true
+
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
+
       - name: Extract project name
         id: extract
         run: |
           echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+
       - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
@@ -150,24 +158,28 @@ jobs:
             gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --no-html-self-contained --html coverage-summary.html
             markdownify coverage-summary.html > coverage-summary.md
             sed -i -e 's/| File | Lines | | | Functions | | Branches | |/| File | Lines | | Functions | | Branches ||\n| --- | --- | --- | --- | --- | --- | --- |/' coverage-summary.md
+
       - name: Post coverage comment
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
           file-path: coverage/coverage-summary.md
           comment-tag: coverage_summary
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         id: coverage-artifact
         with:
           name: coverage-report
           path: coverage/coverage-report.html
+
       - name: Post coverage report link
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
           message: "Detailed coverage report downloadable from [here.](${{steps.coverage-artifact.outputs.artifact-url}})"
           comment-tag: coverage_report_link
+
       - name: Release Coverage Result
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -176,7 +188,6 @@ jobs:
           generate_release_notes: true
           files: |
             ./coverage/coverage-report.html
-  
   
   create_release:
     name: Create Release
@@ -196,17 +207,21 @@ jobs:
         with:
           submodules: true
           token: ${{ secrets.access-token }}
+
       - name: Checkout with default token
         uses: actions/checkout@v4
         if: ${{env.token == ''}}
         with:
           submodules: true
+
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
+
       - name: Extract project name
         id: extract
         run: |
           echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+
       - name: Build Project
         uses: devcontainers/ci@v0.3
         with:
@@ -231,6 +246,7 @@ jobs:
             do
               mv -vf $pkg $(dirname $pkg)/${DISTRO_VER}$(basename $pkg)
             done
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
