@@ -1,0 +1,94 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Cross Driver CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      build-version:
+        required: false
+        type: string
+        default: '["armhf-bookworm", "arm64-bookworm"]'
+        description: 'default architecture and distro version to run builds on (must be valid JSON array format)'
+    secrets:
+      access-token:
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  GITHUB_TOKEN: ${{github.token}}
+  GITHUB_ACTION: "TRUE"
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ${{ fromJson(inputs.build-version) }}
+    permissions:
+      contents: write
+      discussions: write
+    env:
+      token: ${{ secrets.access-token }}
+    steps:
+      - name: Checkout with token
+        uses: actions/checkout@v4
+        if: ${{env.token != ''}}
+        with:
+          submodules: true
+          token: ${{ secrets.access-token }}
+
+      - name: Checkout with default token
+        uses: actions/checkout@v4
+        if: ${{env.token == ''}}
+        with:
+          submodules: true
+
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Extract project name
+        id: extract
+        run: |
+          echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+
+      - name: Build Project
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{github.workspace}}"
+          configFile: .devcontainer/${{matrix.arch}}-container/devcontainer.json
+          push: never
+          runCmd: |
+            rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build"
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cd "/workspaces/${{steps.extract.outputs.proj}}/build"
+            python3 -m venv .venv
+            source .venv/bin/activate
+            pip install git+https://github.com/EffectiveRange/python-xdrvmake
+            xdrvmake ..
+            xdrvmake --build .
+            DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)_"
+            for pkg in $(find ./ -name *.*deb)
+            do
+              mv -vf $pkg $(dirname $pkg)/${DISTRO_VER}$(basename $pkg)
+            done
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            build/*.*deb
