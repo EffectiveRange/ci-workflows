@@ -39,6 +39,10 @@ jobs:
     env:
       token: ${{ secrets.access-token }}
     steps:
+      - name: Free up disk space
+        run: |
+          wget -o /tmp/free_disk_space.sh https://github.com/apache/flink/blob/master/tools/azure-pipelines/free_disk_space.sh
+          /bin/sh /tmp/free_disk_space.sh
       - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
