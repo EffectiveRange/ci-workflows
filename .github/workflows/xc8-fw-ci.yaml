@@ -41,9 +41,25 @@ jobs:
     steps:
       - name: Free up disk space
         run: |
-          wget -O /tmp/free_disk_space.sh https://raw.githubusercontent.com/apache/flink/refs/heads/master/tools/azure-pipelines/free_disk_space.sh
-          /bin/bash /tmp/free_disk_space.sh
-          sudo apt install -y --no-install-recommends nodejs npm
+            df -h
+            echo "Removing large packages"
+            sudo apt-get remove -y '^dotnet-.*'
+            sudo apt-get remove -y '^llvm-.*'
+            sudo apt-get remove -y 'php.*'
+            sudo apt-get remove -y '^mongodb-.*'
+            sudo apt-get remove -y '^mysql-.*'
+            sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+            sudo apt-get autoremove -y
+            sudo apt-get clean
+            df -h
+            echo "Removing large directories"
+            sudo rm -rf /usr/share/dotnet/
+            sudo rm -rf /usr/local/graalvm/
+            sudo rm -rf /usr/local/.ghcup/
+            sudo rm -rf /usr/local/share/powershell
+            sudo rm -rf /usr/local/share/chromium
+            sudo rm -rf /usr/local/lib/android
+            df -h
       - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
