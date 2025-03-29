@@ -40,7 +40,7 @@ on:
       coverage-threshold:
         required: false
         type: number
-        default: 80
+        default: 95
         description: 'Minimum coverage threshold'
       package-architecture:
         required: false
@@ -125,7 +125,7 @@ jobs:
           coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
   prepare:
-    name: Prepare release
+    name: Prepare packaging
     if: success() || needs.test.result == 'skipped'
     needs: test
     runs-on: ubuntu-latest
