@@ -126,7 +126,7 @@ jobs:
 
   prepare:
     name: Prepare release
-    if: always() && success()
+    if: success() || needs.test.result == 'skipped'
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -154,7 +154,7 @@ jobs:
 
   build_wheel:
     name: Create wheel package
-    if: always() && contains(inputs.package-type, 'wheel')
+    if: contains(inputs.package-type, 'wheel')
     needs: prepare
     runs-on: ubuntu-latest
     permissions:
@@ -194,7 +194,7 @@ jobs:
 
   build_fpm-deb:
     name: Create debian package with FPM
-    if: always() && contains(inputs.package-type, 'fpm-deb')
+    if: contains(inputs.package-type, 'fpm-deb')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -245,7 +245,7 @@ jobs:
 
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
-    if: always() && contains(inputs.package-type, 'dh-virtualenv')
+    if: contains(inputs.package-type, 'dh-virtualenv')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -315,7 +315,11 @@ jobs:
 
   release:
     name: Create release
-    if: always() && success() &&startsWith(github.ref, 'refs/tags/')
+    if: |
+      always() && startsWith(github.ref, 'refs/tags/') &&
+      (needs.build_wheel.result == 'success' || needs.build_wheel.result == 'skipped') &&
+      (needs.build_fpm-deb.result == 'success' || needs.build_fpm-deb.result == 'skipped') &&
+      (needs.build_dh-virtualenv.result == 'success' || needs.build_dh-virtualenv.result == 'skipped')
     needs: [ prepare, build_wheel, build_fpm-deb, build_dh-virtualenv ]
     runs-on: ubuntu-latest
     permissions:
