@@ -1,0 +1,91 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Cross Driver CI/CD
+
+on:
+  workflow_call:
+    inputs:
+     test-timeout:
+        required: false
+        type: number
+        description: 'ctest timeout in seconds'
+        default: 300
+    secrets:
+      access-token:
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  GITHUB_TOKEN: ${{github.token}}
+  GITHUB_ACTION: "TRUE"
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+    env:
+      token: ${{ secrets.access-token }}
+    steps:
+      - name: Checkout with token
+        uses: actions/checkout@v4
+        if: ${{env.token != ''}}
+        with:
+          submodules: true
+          token: ${{ secrets.access-token }}
+
+      - name: Checkout with default token
+        uses: actions/checkout@v4
+        if: ${{env.token == ''}}
+        with:
+          submodules: true
+
+      - name: Extract project name
+        id: extract
+        run: |
+          echo proj="$(basename  ${{github.workspace}})" >> $GITHUB_OUTPUT
+
+      - name: Build Project
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{github.workspace}}"
+          configFile: .devcontainer/xc8-bookworm-container/devcontainer.json
+          push: never
+          runCmd: |
+            rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build"
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
+            cd "/workspaces/${{steps.extract.outputs.proj}}/build"
+            /opt/microchip/mplabx/mplab_platform/bin/prjMakefilesGenerator.sh .
+            make all
+            mkdir cmake_build
+            cd cmake_build
+            cmake -DCMAKE_BUILD_TYPE=Release ../
+            cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
+            ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
+            if [ $? -ne 0 ]; then
+              echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
+              exit 1
+            fi
+            echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
+            cpack .
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            dist/*.*deb
