@@ -86,8 +86,8 @@ jobs:
           push: never
           runCmd: |
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build"
-            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
-            cd "/workspaces/${{steps.extract.outputs.proj}}/build"
+            mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"            
+            cd "/workspaces/${{steps.extract.outputs.proj}}"
             /opt/microchip/mplabx/mplab_platform/bin/prjMakefilesGenerator.sh .
             make all
             mkdir cmake_build
