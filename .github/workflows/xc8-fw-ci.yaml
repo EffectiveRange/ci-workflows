@@ -99,7 +99,7 @@ jobs:
               echo "::error title=UNIT-TESTS-FAILED::ctest existed with $?"
               exit 1
             fi
-            echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/build/CPackProperties.cmake
+            echo 'set(CPACK_PACKAGE_DIRECTORY /workspaces/${{steps.extract.outputs.proj}}/dist)' >  /workspaces/${{steps.extract.outputs.proj}}/cmake_build/CPackProperties.cmake
             cpack .
 
       - name: Release
