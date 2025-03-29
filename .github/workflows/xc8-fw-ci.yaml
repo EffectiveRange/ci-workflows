@@ -43,6 +43,7 @@ jobs:
         run: |
           wget -O /tmp/free_disk_space.sh https://raw.githubusercontent.com/apache/flink/refs/heads/master/tools/azure-pipelines/free_disk_space.sh
           /bin/bash /tmp/free_disk_space.sh
+          apt install -y --no-install-recommends npm
       - name: Checkout with token
         uses: actions/checkout@v4
         if: ${{env.token != ''}}
