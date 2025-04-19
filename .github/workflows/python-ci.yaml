@@ -95,21 +95,43 @@ jobs:
           configFile: .devcontainer/${{ inputs.test-architecture }}-${{ inputs.test-distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            dpkgdeps -v .
+            dpkgdeps -v --arch ${{ inputs.test-architecture }} .
             
-            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
-            pip install mypy flake8 pytest pytest-timeout wheel
-            pip install .
-            
-            mypy --install-types --non-interactive || true
-            mypy || { echo "mypy exited with $?"; exit 1; }
-            flake8 || { echo "flake exited with $?"; exit 1; }
-            
-            if [ ${{ inputs.coverage-enabled }} == true ]; then
-              pip install coverage
-              coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+            if [ ${{ matrix.architecture }} == "amd64" ]; then
+              python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
+              pip install mypy flake8 pytest pytest-timeout wheel
+              pip install .
+              
+              mypy --install-types --non-interactive || true
+              mypy || { echo "mypy exited with $?"; exit 1; }
+              flake8 || { echo "flake exited with $?"; exit 1; }
+              
+              if [ ${{ inputs.coverage-enabled }} == true ]; then
+                pip install coverage
+                coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              else
+                pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              fi
             else
-              pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
+              BUILDROOT="/var/chroot/buildroot"
+            
+              sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
+            
+              sudo schroot -p -c buildroot -- python3 -m venv /tmp/venv
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install .
+            
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy --install-types --non-interactive || true
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy || { echo "mypy exited with $?"; exit 1; }
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/flake8 || { echo "flake exited with $?"; exit 1; }
+            
+              if [ ${{ inputs.coverage-enabled }} == true ]; then
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install coverage
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              else
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              fi
             fi
 
       - name: Coverage comment
