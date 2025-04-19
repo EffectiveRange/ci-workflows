@@ -95,6 +95,8 @@ jobs:
           configFile: .devcontainer/${{ inputs.test-architecture }}-${{ inputs.test-distribution }}-container/devcontainer.json
           push: never
           runCmd: |
+            dpkgdeps -v .
+            
             python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
             pip install mypy flake8 pytest pytest-timeout wheel
             pip install .
@@ -182,7 +184,10 @@ jobs:
           subFolder: "${{ github.workspace }}"
           configFile: .devcontainer/amd64-bookworm-container/devcontainer.json
           push: never
-          runCmd: pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
+          runCmd: |
+            dpkgdeps -v .
+            
+            pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
@@ -226,6 +231,8 @@ jobs:
           configFile: .devcontainer/amd64-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
+            dpkgdeps -v .
+            
             pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
             DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
@@ -281,6 +288,8 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
+            dpkgdeps -v --arch ${{ matrix.architecture }} .
+            
             if [ ${{ matrix.architecture }} == "amd64" ]; then
               sudo apt update
               sudo apt install -y python3-stdeb packaging-tools
