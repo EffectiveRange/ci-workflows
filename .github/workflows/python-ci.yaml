@@ -95,19 +95,45 @@ jobs:
           configFile: .devcontainer/${{ inputs.test-architecture }}-${{ inputs.test-distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
-            pip install mypy flake8 pytest pytest-timeout wheel
-            pip install .
+            if [ ${{ matrix.architecture }} == "amd64" ]; then
+              dpkgdeps -v .
             
-            mypy --install-types --non-interactive || true
-            mypy || { echo "mypy exited with $?"; exit 1; }
-            flake8 || { echo "flake exited with $?"; exit 1; }
+              python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
+              pip install mypy flake8 pytest pytest-timeout wheel
+              pip install .
             
-            if [ ${{ inputs.coverage-enabled }} == true ]; then
-              pip install coverage
-              coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              mypy --install-types --non-interactive || true
+              mypy || { echo "mypy exited with $?"; exit 1; }
+              flake8 || { echo "flake exited with $?"; exit 1; }
+            
+              if [ ${{ inputs.coverage-enabled }} == true ]; then
+                pip install coverage
+                coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              else
+                pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              fi
             else
-              pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              dpkgdeps -v --arch ${{ inputs.test-architecture }} .
+            
+              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
+              BUILDROOT="/var/chroot/buildroot"
+            
+              sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
+            
+              sudo schroot -p -c buildroot -- python3 -m venv --system-site-packages /tmp/venv
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install .
+            
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy --install-types --non-interactive || true
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy || { echo "mypy exited with $?"; exit 1; }
+              sudo schroot -p -c buildroot -- /tmp/venv/bin/flake8 || { echo "flake exited with $?"; exit 1; }
+            
+              if [ ${{ inputs.coverage-enabled }} == true ]; then
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install coverage
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              else
+                sudo schroot -p -c buildroot -- /tmp/venv/bin/pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+              fi
             fi
 
       - name: Coverage comment
@@ -182,7 +208,10 @@ jobs:
           subFolder: "${{ github.workspace }}"
           configFile: .devcontainer/amd64-bookworm-container/devcontainer.json
           push: never
-          runCmd: pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
+          runCmd: |
+            dpkgdeps -v .
+            
+            pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
@@ -226,6 +255,8 @@ jobs:
           configFile: .devcontainer/amd64-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
+            dpkgdeps -v .
+            
             pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
             DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
@@ -282,10 +313,14 @@ jobs:
           push: never
           runCmd: |
             if [ ${{ matrix.architecture }} == "amd64" ]; then
+              dpkgdeps -v .
+            
               sudo apt update
               sudo apt install -y python3-stdeb packaging-tools
               pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
             else
+              dpkgdeps -v --arch ${{ matrix.architecture }} .
+            
               WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
               BUILDROOT="/var/chroot/buildroot"
             
