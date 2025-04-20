@@ -98,7 +98,7 @@ jobs:
             dpkgdeps -v --arch ${{ inputs.test-architecture }} .
             
             if [ ${{ matrix.architecture }} == "amd64" ]; then
-              python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
+              python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
               pip install mypy flake8 pytest pytest-timeout wheel
               pip install .
               
@@ -118,7 +118,7 @@ jobs:
             
               sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
             
-              sudo schroot -p -c buildroot -- python3 -m venv /tmp/venv
+              sudo schroot -p -c buildroot -- python3 -m venv --system-site-packages /tmp/venv
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install .
             
