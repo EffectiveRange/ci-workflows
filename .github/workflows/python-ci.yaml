@@ -257,6 +257,10 @@ jobs:
           runCmd: |
             dpkgdeps -v .
             
+            sudo apt update
+            sudo apt install -y packaging-tools
+            sudo gem install fpm
+            
             pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
             DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
