@@ -57,6 +57,11 @@ on:
         type: string
         default: 'wheel, fpm-deb'
         description: 'Packaging types'
+      dynamic-version:
+        required: false
+        default: false
+        type: boolean
+        description: 'Should the version be extracted from the tag and updated in setup.py?'
     secrets:
       access-token:
         required: false
@@ -153,7 +158,7 @@ jobs:
 
   prepare:
     name: Prepare packaging
-    if: success() || needs.test.result == 'skipped'
+    if: ${{ ! inputs.dynamic-version }} && success() || needs.test.result == 'skipped'
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -195,6 +200,7 @@ jobs:
           token: ${{ env.GITHUB_TOKEN }}
 
       - name: Update version in setup.py
+        if: ${{ ! inputs.dynamic-version }}
         run: |
           if [ -f setup.py ]; then
             sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
