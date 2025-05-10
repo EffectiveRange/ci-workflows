@@ -158,7 +158,7 @@ jobs:
 
   prepare:
     name: Prepare packaging
-    if: ${{ ! inputs.dynamic-version }} && success() || needs.test.result == 'skipped'
+    if: always()
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -180,13 +180,19 @@ jobs:
           if [[ "${GITHUB_REF#refs/tags/v}" =~ $VERSION_REGEX ]]; then
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           else
-            VERSION=$(grep -oP "version=['\"]\K[^\"]+(?=['\"])" setup.py)
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if [ "${{ inputs.dynamic-version }}" = "true" ]; then
+              pip3 install setuptools-scm
+              VERSION=$(python3 -c "import setuptools_scm; print(setuptools_scm.get_version())")
+              echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            else
+              VERSION=$(grep -oP "version=['\"]\K[^\"]+(?=['\"])" setup.py)
+              echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            fi
           fi
 
   build_wheel:
     name: Create wheel package
-    if: contains(inputs.package-type, 'wheel')
+    if: always() && contains(inputs.package-type, 'wheel')
     needs: prepare
     runs-on: ubuntu-latest
     permissions:
@@ -230,7 +236,7 @@ jobs:
 
   build_fpm-deb:
     name: Create debian package with FPM
-    if: contains(inputs.package-type, 'fpm-deb')
+    if: always() && contains(inputs.package-type, 'fpm-deb')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -247,6 +253,7 @@ jobs:
           token: ${{ env.GITHUB_TOKEN }}
 
       - name: Update version in setup.py
+        if: ${{ ! inputs.dynamic-version }}
         run: |
           if [ -f setup.py ]; then
             sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
@@ -287,7 +294,7 @@ jobs:
 
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
-    if: contains(inputs.package-type, 'dh-virtualenv')
+    if: always() && contains(inputs.package-type, 'dh-virtualenv')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -308,6 +315,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Update version in setup.py
+        if: ${{ ! inputs.dynamic-version }}
         run: |
           if [ -f setup.py ]; then
             sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
@@ -379,6 +387,7 @@ jobs:
           token: ${{ env.GITHUB_TOKEN }}
 
       - name: Update version in setup.py
+        if: ${{ ! inputs.dynamic-version }}
         run: |
           if [ -f setup.py ]; then
             sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
