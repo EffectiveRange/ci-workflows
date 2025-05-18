@@ -158,7 +158,7 @@ jobs:
 
   prepare:
     name: Prepare packaging
-    if: always()
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -192,7 +192,7 @@ jobs:
 
   build_wheel:
     name: Create wheel package
-    if: always() && contains(inputs.package-type, 'wheel')
+    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'wheel')
     needs: prepare
     runs-on: ubuntu-latest
     permissions:
@@ -236,7 +236,7 @@ jobs:
 
   build_fpm-deb:
     name: Create debian package with FPM
-    if: always() && contains(inputs.package-type, 'fpm-deb')
+    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'fpm-deb')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -294,7 +294,7 @@ jobs:
 
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
-    if: always() && contains(inputs.package-type, 'dh-virtualenv')
+    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'dh-virtualenv')
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
