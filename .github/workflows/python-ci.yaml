@@ -327,7 +327,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
           git tag -fa latest -m "Latest release"
-          git push origin :refs/tags/latest
+          git push origin latest
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
