@@ -57,11 +57,6 @@ on:
         type: string
         default: 'wheel, fpm-deb'
         description: 'Packaging types'
-      dynamic-version:
-        required: false
-        default: false
-        type: boolean
-        description: 'Should the version be extracted from the tag and updated in setup.py?'
     secrets:
       access-token:
         required: false
@@ -124,7 +119,7 @@ jobs:
               WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
               BUILDROOT="/var/chroot/buildroot"
             
-              sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
+              sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
             
               sudo schroot -p -c buildroot -- python3 -m venv --system-site-packages /tmp/venv
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel
@@ -156,64 +151,20 @@ jobs:
           pip install coverage
           coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
-  prepare:
-    name: Prepare packaging
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+  build_wheel:
+    name: Create wheel package
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'wheel')
     needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
       discussions: write
-    outputs:
-      version: ${{ steps.set-version.outputs.version }}
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
-
-      - name: Extract version
-        id: set-version
-        run: |
-          VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
-          if [[ "${GITHUB_REF#refs/tags/v}" =~ $VERSION_REGEX ]]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          else
-            if [ "${{ inputs.dynamic-version }}" = "true" ]; then
-              pip3 install setuptools-scm
-              VERSION=$(python3 -c "import setuptools_scm; print(setuptools_scm.get_version())")
-              echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            else
-              VERSION=$(grep -oP "version=['\"]\K[^\"]+(?=['\"])" setup.py)
-              echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-  build_wheel:
-    name: Create wheel package
-    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'wheel')
-    needs: prepare
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      discussions: write
-    steps:
-      - name: Checkout with submodules
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ env.GITHUB_TOKEN }}
-
-      - name: Update version in setup.py
-        if: ${{ ! inputs.dynamic-version }}
-        run: |
-          if [ -f setup.py ]; then
-            sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
-          else
-            echo "setup.py not found"
-            exit 1
-          fi
 
       - name: Create package
         uses: devcontainers/ci@v0.3
@@ -223,6 +174,9 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v .
+            
+            sudo apt update
+            sudo apt install -y packaging-tools
             
             pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
@@ -236,8 +190,8 @@ jobs:
 
   build_fpm-deb:
     name: Create debian package with FPM
-    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'fpm-deb')
-    needs: prepare
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'fpm-deb')
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -251,16 +205,6 @@ jobs:
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
-
-      - name: Update version in setup.py
-        if: ${{ ! inputs.dynamic-version }}
-        run: |
-          if [ -f setup.py ]; then
-            sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
-          else
-            echo "setup.py not found"
-            exit 1
-          fi
 
       - name: Create package
         uses: devcontainers/ci@v0.3
@@ -294,8 +238,8 @@ jobs:
 
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
-    if: always() && (needs.prepare.result == 'success') && contains(inputs.package-type, 'dh-virtualenv')
-    needs: prepare
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'dh-virtualenv')
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -313,16 +257,6 @@ jobs:
 
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
-
-      - name: Update version in setup.py
-        if: ${{ ! inputs.dynamic-version }}
-        run: |
-          if [ -f setup.py ]; then
-            sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
-          else
-            echo "setup.py not found"
-            exit 1
-          fi
 
       - name: Create package
         uses: devcontainers/ci@v0.3
@@ -343,7 +277,7 @@ jobs:
               WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
               BUILDROOT="/var/chroot/buildroot"
             
-              sudo rsync -av --exclude ".git" --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
+              sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
             
               sudo schroot -p -c buildroot -- apt update
               sudo schroot -p -c buildroot -- apt install -y python3-stdeb packaging-tools
@@ -374,7 +308,7 @@ jobs:
       (needs.build_wheel.result == 'success' || needs.build_wheel.result == 'skipped') &&
       (needs.build_fpm-deb.result == 'success' || needs.build_fpm-deb.result == 'skipped') &&
       (needs.build_dh-virtualenv.result == 'success' || needs.build_dh-virtualenv.result == 'skipped')
-    needs: [ prepare, build_wheel, build_fpm-deb, build_dh-virtualenv ]
+    needs: [ build_wheel, build_fpm-deb, build_dh-virtualenv ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -386,26 +320,30 @@ jobs:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
 
-      - name: Update version in setup.py
-        if: ${{ ! inputs.dynamic-version }}
-        run: |
-          if [ -f setup.py ]; then
-            sed -i "s/version=['\"].*['\"]/version='${{ needs.prepare.outputs.version }}'/" setup.py
-          else
-            echo "setup.py not found"
-            exit 1
-          fi
-
-      - name: Commit changes
+      - name: Tag latest
+        shell: bash
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git diff --exit-code || git commit -am "Update version to ${{ needs.prepare.outputs.version }}"
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+          git tag -fa latest -m "Latest release"
+          git push origin latest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          github_token: ${{ env.GITHUB_TOKEN }}
+          merge-multiple: true
+          path: ${{ github.workspace }}/dist
 
       - name: Create release
-        uses: EffectiveRange/version-release-github-action@v2
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            dist/*.deb
+            dist/*.whl
