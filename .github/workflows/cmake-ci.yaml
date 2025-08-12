@@ -69,14 +69,14 @@ jobs:
       discussions: write
     steps:
       - name: Checkout with token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token != ''}}
         with:
           submodules: true
           token: ${{ secrets.access-token }}
 
       - name: Checkout with default token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token == ''}}
         with:
           submodules: true
@@ -119,14 +119,14 @@ jobs:
       token: ${{ secrets.access-token }}
     steps:
       - name: Checkout with token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token != ''}}
         with:
           submodules: true
           token: ${{ secrets.access-token }}
 
       - name: Checkout with default token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token == ''}}
         with:
           submodules: true
@@ -208,14 +208,14 @@ jobs:
       token: ${{ secrets.access-token }}
     steps:
       - name: Checkout with token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token != ''}}
         with:
           submodules: true
           token: ${{ secrets.access-token }}
 
       - name: Checkout with default token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{env.token == ''}}
         with:
           submodules: true

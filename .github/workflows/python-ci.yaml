@@ -81,7 +81,7 @@ jobs:
 
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
@@ -161,7 +161,7 @@ jobs:
       discussions: write
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
@@ -201,7 +201,7 @@ jobs:
       discussions: write
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
@@ -250,7 +250,7 @@ jobs:
       discussions: write
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
@@ -315,7 +315,7 @@ jobs:
       discussions: write
     steps:
       - name: Checkout with submodules
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN }}
