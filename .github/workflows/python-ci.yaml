@@ -221,7 +221,7 @@ jobs:
               dpkgdeps -v .
 
               sudo apt update
-              sudo apt install -y python3-stdeb python3-setuptools packaging-tools
+              sudo apt install -y python3-stdeb python3-setuptools python3-setuptools-scm packaging-tools
               pack_python . -s wheel-deb || { echo "pack_python exited with $?"; exit 1; }
             else
               dpkgdeps -v --arch ${{ matrix.architecture }} .
@@ -232,7 +232,7 @@ jobs:
               sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
 
               sudo schroot -p -c buildroot -- apt update
-              sudo schroot -p -c buildroot -- apt install -y python3-stdeb python3-setuptools packaging-tools
+              sudo schroot -p -c buildroot -- apt install -y python3-stdeb python3-setuptools python3-setuptools-scm packaging-tools
               sudo schroot -p -c buildroot -- pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
 
               sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
