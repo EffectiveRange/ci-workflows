@@ -350,7 +350,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           merge-multiple: true
           path: ${{ github.workspace }}/dist
