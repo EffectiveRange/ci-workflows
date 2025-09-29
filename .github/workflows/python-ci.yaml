@@ -50,7 +50,7 @@ on:
       package-distribution:
         required: false
         type: string
-        default: '["bullseye", "bookworm"]'
+        default: '["bookworm"]'
         description: 'Distribution to run builds on (must be valid JSON array format)'
       package-type:
         required: false
