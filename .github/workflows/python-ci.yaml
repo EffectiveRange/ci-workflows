@@ -217,32 +217,16 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            if [ ${{ matrix.architecture }} == "amd64" ]; then
-              dpkgdeps -v .
+            dpkgdeps -v --arch ${{ matrix.architecture }} .
 
-              sudo apt update
-              sudo apt install -y python3-stdeb python3-setuptools python3-setuptools-scm packaging-tools
-              pack_python . -s wheel-deb || { echo "pack_python exited with $?"; exit 1; }
-            else
-              dpkgdeps -v --arch ${{ matrix.architecture }} .
+            sudo apt update
+            sudo apt install -y packaging-tools
 
-              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
-              BUILDROOT="/var/chroot/buildroot"
-
-              sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
-
-              sudo schroot -p -c buildroot -- apt update
-              sudo schroot -p -c buildroot -- apt install -y python3-stdeb python3-setuptools python3-setuptools-scm packaging-tools
-              sudo schroot -p -c buildroot -- pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
-
-              sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
-            fi
-
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
+            pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
 
             for package in $(find dist -name *.deb)
             do
-              sudo mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
             done
 
       - name: Upload package
@@ -286,11 +270,9 @@ jobs:
             
             pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
-            
             for package in $(find dist -name *.deb)
             do
-              mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
             done
 
       - name: Upload package
@@ -330,32 +312,16 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            if [ ${{ matrix.architecture }} == "amd64" ]; then
-              dpkgdeps -v .
-            
-              sudo apt update
-              sudo apt install -y python3-stdeb packaging-tools
-              pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
-            else
-              dpkgdeps -v --arch ${{ matrix.architecture }} .
-            
-              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
-              BUILDROOT="/var/chroot/buildroot"
-            
-              sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
-            
-              sudo schroot -p -c buildroot -- apt update
-              sudo schroot -p -c buildroot -- apt install -y python3-stdeb packaging-tools
-              sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
-            
-              sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
-            fi
-            
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
-            
+            dpkgdeps -v --arch ${{ matrix.architecture }} .
+
+            sudo apt update
+            sudo apt install -y packaging-tools
+
+            pack_python . -s dh-virtualenv -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
+
             for package in $(find dist -name *.deb)
             do
-              sudo mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
             done
 
       - name: Upload package
