@@ -50,7 +50,7 @@ on:
       package-distribution:
         required: false
         type: string
-        default: '["bullseye", "bookworm"]'
+        default: '["bookworm"]'
         description: 'Distribution to run builds on (must be valid JSON array format)'
       package-type:
         required: false
@@ -174,11 +174,8 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v .
-            
-            sudo apt update
-            sudo apt install -y packaging-tools
-            
-            pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
+
+            sudo pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
@@ -186,6 +183,52 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}_wheel
           path: dist/*.whl
+          if-no-files-found: error
+
+  build_wheel-deb:
+    name: Create debian package with wheel and venv
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'wheel-deb')
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: ${{ fromJson(inputs.package-architecture) }}
+        distribution: ${{ fromJson(inputs.package-distribution) }}
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ env.GITHUB_TOKEN }}
+
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Create package
+        uses: devcontainers/ci@v0.3
+        with:
+          subFolder: "${{ github.workspace }}"
+          configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
+          push: never
+          runCmd: |
+            dpkgdeps -v --arch ${{ matrix.architecture }} .
+
+            sudo pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
+
+            for package in $(find dist -name *.deb)
+            do
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
+            done
+
+      - name: Upload package
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}_wheel-deb_${{ matrix.architecture }}_${{ matrix.distribution }}
+          path: dist/*.deb
           if-no-files-found: error
 
   build_fpm-deb:
@@ -215,17 +258,11 @@ jobs:
           runCmd: |
             dpkgdeps -v .
             
-            sudo apt update
-            sudo apt install -y packaging-tools
-            sudo gem install fpm
-            
-            pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
-            
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
+            sudo pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
             for package in $(find dist -name *.deb)
             do
-              mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
             done
 
       - name: Upload package
@@ -265,32 +302,13 @@ jobs:
           configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
           push: never
           runCmd: |
-            if [ ${{ matrix.architecture }} == "amd64" ]; then
-              dpkgdeps -v .
-            
-              sudo apt update
-              sudo apt install -y python3-stdeb packaging-tools
-              pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
-            else
-              dpkgdeps -v --arch ${{ matrix.architecture }} .
-            
-              WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
-              BUILDROOT="/var/chroot/buildroot"
-            
-              sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
-            
-              sudo schroot -p -c buildroot -- apt update
-              sudo schroot -p -c buildroot -- apt install -y python3-stdeb packaging-tools
-              sudo schroot -p -c buildroot -- pack_python . -s dh-virtualenv || { echo "pack_python exited with $?"; exit 1; }
-            
-              sudo rsync -av --include "*.deb" --exclude "*" --mkpath "${BUILDROOT}${WORKSPACE}/dist/" "${WORKSPACE}/dist/"
-            fi
-            
-            DISTRIBUTION="$(echo ${{ matrix.distribution }} | cut -d'-' -f2)"
-            
+            dpkgdeps -v --arch ${{ matrix.architecture }} .
+
+            sudo pack_python . -s dh-virtualenv -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
+
             for package in $(find dist -name *.deb)
             do
-              sudo mv -vf $package $(dirname $package)/${DISTRIBUTION}_$(basename $package)
+              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
             done
 
       - name: Upload package
