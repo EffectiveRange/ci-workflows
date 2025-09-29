@@ -174,10 +174,7 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v .
-            
-            sudo apt update
-            sudo apt install -y packaging-tools
-            
+
             sudo pack_python . -s wheel || { echo "pack_python exited with $?"; exit 1; }
 
       - name: Upload package
@@ -218,9 +215,6 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v --arch ${{ matrix.architecture }} .
-
-            sudo apt update
-            sudo apt install -y packaging-tools
 
             sudo pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
 
@@ -263,10 +257,6 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v .
-            
-            sudo apt update
-            sudo apt install -y packaging-tools
-            sudo gem install fpm
             
             sudo pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
             
@@ -313,9 +303,6 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v --arch ${{ matrix.architecture }} .
-
-            sudo apt update
-            sudo apt install -y packaging-tools
 
             sudo pack_python . -s dh-virtualenv -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
 
