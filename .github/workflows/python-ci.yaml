@@ -324,9 +324,10 @@ jobs:
     if: |
       always() && startsWith(github.ref, 'refs/tags/') &&
       (needs.build_wheel.result == 'success' || needs.build_wheel.result == 'skipped') &&
+      (needs.build_wheel-deb.result == 'success' || needs.build_wheel-deb.result == 'skipped') &&
       (needs.build_fpm-deb.result == 'success' || needs.build_fpm-deb.result == 'skipped') &&
       (needs.build_dh-virtualenv.result == 'success' || needs.build_dh-virtualenv.result == 'skipped')
-    needs: [ build_wheel, build_fpm-deb, build_dh-virtualenv ]
+    needs: [ build_wheel, build_wheel-deb, build_fpm-deb, build_dh-virtualenv ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
