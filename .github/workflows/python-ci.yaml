@@ -193,7 +193,6 @@ jobs:
     strategy:
       matrix:
         architecture: ${{ fromJson(inputs.package-architecture) }}
-        distribution: ${{ fromJson(inputs.package-distribution) }}
     permissions:
       contents: write
       discussions: write
@@ -211,23 +210,20 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{ github.workspace }}"
-          configFile: .devcontainer/${{ matrix.architecture }}-${{ matrix.distribution }}-container/devcontainer.json
+          configFile: .devcontainer/${{ matrix.architecture }}-bookworm-container/devcontainer.json
           push: never
           runCmd: |
-            dpkgdeps -v --arch ${{ matrix.architecture }} .
+            sudo apt install -y build-essential
+
+            dpkgdeps -v .
 
             sudo pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
-
-            for package in $(find dist -name *.deb)
-            do
-              sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
-            done
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}_wheel-deb_${{ matrix.architecture }}_${{ matrix.distribution }}
+          name: ${{ github.event.repository.name }}_wheel-deb_${{ matrix.architecture }}
           path: dist/*.deb
           if-no-files-found: error
 
