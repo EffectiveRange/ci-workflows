@@ -108,15 +108,15 @@ jobs:
           runCmd: |
             if [ ${{ inputs.test-architecture }} == "amd64" ]; then
               dpkgdeps -v .
-            
+
               python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
               pip install mypy flake8 pytest pytest-timeout wheel
               pip install .
-            
+
               mypy --install-types --non-interactive || true
               mypy || { echo "mypy exited with $?"; exit 1; }
               flake8 || { echo "flake exited with $?"; exit 1; }
-            
+
               if [ ${{ inputs.coverage-enabled }} == true ]; then
                 pip install coverage
                 coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
@@ -125,20 +125,20 @@ jobs:
               fi
             else
               dpkgdeps -v --arch ${{ inputs.test-architecture }} .
-            
+
               WORKSPACE="/workspaces/$(basename ${{ github.workspace }})"
               BUILDROOT="/var/chroot/buildroot"
-            
+
               sudo rsync -av --mkpath "${WORKSPACE}/" "${BUILDROOT}${WORKSPACE}/"
-            
+
               sudo schroot -p -c buildroot -- python3 -m venv --system-site-packages /tmp/venv
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install .
-            
+
               sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy --install-types --non-interactive || true
               sudo schroot -p -c buildroot -- /tmp/venv/bin/mypy || { echo "mypy exited with $?"; exit 1; }
               sudo schroot -p -c buildroot -- /tmp/venv/bin/flake8 || { echo "flake exited with $?"; exit 1; }
-            
+
               if [ ${{ inputs.coverage-enabled }} == true ]; then
                 sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install coverage
                 sudo schroot -p -c buildroot -- /tmp/venv/bin/coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
@@ -229,10 +229,12 @@ jobs:
 
             sudo pack_python . -s wheel-deb -t ${{ matrix.architecture }} || { echo "pack_python exited with $?"; exit 1; }
 
-            for package in $(find dist -name *.deb)
-            do
-              sudo mv -vf $package "${package/_all.deb/_${{ matrix.architecture }}.deb}"
-            done
+            if [ ${{ matrix.architecture }} != "all" ]; then
+              for package in $(find dist -name *.deb)
+              do
+                sudo mv -vf $package "${package/_all.deb/_${{ matrix.architecture }}.deb}"
+              done
+            fi
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
@@ -268,9 +270,9 @@ jobs:
           push: never
           runCmd: |
             dpkgdeps -v .
-            
+
             sudo pack_python . -s fpm-deb || { echo "pack_python exited with $?"; exit 1; }
-            
+
             for package in $(find dist -name *.deb)
             do
               sudo mv -vf $package $(dirname $package)/${{ matrix.distribution }}_$(basename $package)
