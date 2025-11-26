@@ -189,7 +189,7 @@ jobs:
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ github.event.repository.name }}_wheel
           path: dist/*.whl
@@ -238,7 +238,7 @@ jobs:
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ github.event.repository.name }}_wheel-deb_${{ matrix.architecture }}
           path: dist/*.deb
@@ -280,7 +280,7 @@ jobs:
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ github.event.repository.name }}_fpm-deb_${{ matrix.distribution }}
           path: dist/*.deb
@@ -326,7 +326,7 @@ jobs:
 
       - name: Upload package
         if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ github.event.repository.name }}_dh-virtualenv_${{ matrix.architecture }}_${{ matrix.distribution }}
           path: dist/*.deb
