@@ -220,7 +220,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           subFolder: "${{ github.workspace }}"
-          configFile: .devcontainer/${{ matrix.architecture }}-bookworm${{ inputs.package-overlay && format('-{0}', inputs.package-overlay) }}-container/devcontainer.json
+          configFile: .devcontainer/amd64-bookworm${{ inputs.package-overlay && format('-{0}', inputs.package-overlay) }}-container/devcontainer.json
           push: never
           runCmd: |
             sudo apt install -y build-essential
