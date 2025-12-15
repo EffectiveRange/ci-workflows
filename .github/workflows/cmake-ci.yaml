@@ -172,7 +172,7 @@ jobs:
           comment-tag: coverage_summary
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         id: coverage-artifact
         with:
           name: coverage-report
