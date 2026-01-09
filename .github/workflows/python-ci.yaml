@@ -55,7 +55,7 @@ on:
       package-distribution:
         required: false
         type: string
-        default: '["bookworm"]'
+        default: '["bookworm", "trixie"]'
         description: 'Distribution to run builds on (must be valid JSON array format)'
       package-overlay:
         required: false
