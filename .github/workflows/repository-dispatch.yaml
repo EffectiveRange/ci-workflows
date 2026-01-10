@@ -1,0 +1,119 @@
+name: Repository Dispatch (GitHub App)
+
+on:
+  workflow_call:
+    inputs:
+      downstream_repo:
+        description: "Comma-separated downstream repo names (no owner), e.g. repo-a or repo-a,repo-b"
+        required: true
+        type: string
+
+      downstream_owner:
+        description: "Target owner/org. Defaults to caller repository owner."
+        required: false
+        type: string
+        default: ""
+
+      event_type:
+        description: "repository_dispatch event_type string"
+        required: true
+        type: string
+
+      version:
+        description: "Value placed into client_payload.version"
+        required: true
+        type: string
+
+    secrets:
+      REPO_PROPAGATE_APP_ID:
+        required: true
+      REPO_PROPAGATE_KEY:
+        required: true
+
+jobs:
+  dispatch:
+    name: Dispatch repository_dispatch event(s)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Normalize downstream repos (shell-only)
+        id: norm
+        shell: bash
+        env:
+          DOWNSTREAM_REPO: ${{ inputs.downstream_repo }}
+        run: |
+          set -euo pipefail
+
+          # Remove all whitespace
+          repos="${DOWNSTREAM_REPO//[[:space:]]/}"
+
+          if [[ -z "$repos" ]]; then
+            echo "Error: downstream_repo is empty" >&2
+            exit 1
+          fi
+
+          IFS=',' read -ra parts <<< "$repos"
+          if [[ "${#parts[@]}" -eq 0 ]]; then
+            echo "Error: no valid downstream repos found" >&2
+            exit 1
+          fi
+
+          for r in "${parts[@]}"; do
+            if [[ -z "$r" ]]; then
+              echo "Error: empty repo name in downstream_repo" >&2
+              exit 1
+            fi
+            if [[ "$r" == *"/"* ]]; then
+              echo "Error: downstream_repo must not contain owner (got '$r')" >&2
+              exit 1
+            fi
+          done
+
+          repos_csv="$(IFS=','; echo "${parts[*]}")"
+          echo "repos_csv=${repos_csv}" >> "$GITHUB_OUTPUT"
+
+      - name: Mint GitHub App installation token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.REPO_PROPAGATE_APP_ID }}
+          private-key: ${{ secrets.REPO_PROPAGATE_KEY }}
+          repositories: ${{ steps.norm.outputs.repos_csv }}
+
+      - name: Dispatch repository_dispatch events
+        shell: bash
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          ORG: ${{ inputs.downstream_owner || github.repository_owner }}
+          REPOS: ${{ steps.norm.outputs.repos_csv }}
+          EVENT_TYPE: ${{ inputs.event_type }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${VERSION//[[:space:]]/}" ]]; then
+            echo "Error: version is empty" >&2
+            exit 1
+          fi
+
+          payload="$(jq -n \
+            --arg et "${EVENT_TYPE}" \
+            --arg ver "${VERSION}" \
+            '{event_type: $et, client_payload: { version: $ver }}')"
+
+          echo "event_type=${EVENT_TYPE}"
+          echo "client_payload.version=${VERSION}"
+          echo "downstream_owner=${ORG}"
+          echo "downstream_repos=${REPOS}"
+
+          IFS=',' read -ra repos <<< "${REPOS}"
+          for repo in "${repos[@]}"; do
+            echo "Dispatching to ${ORG}/${repo} ..."
+            curl -fSsL \
+              -X POST \
+              -H "Authorization: Bearer ${TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/${ORG}/${repo}/dispatches" \
+              -d "${payload}"
+          done
