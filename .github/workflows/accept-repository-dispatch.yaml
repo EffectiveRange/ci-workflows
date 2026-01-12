@@ -27,6 +27,9 @@ on:
       dispatch_type:
         description: "repository_dispatch action (empty for tag push)"
         value: ${{ jobs.prepare.outputs.dispatch_type }}
+      payload_version:
+        description: "Source version from the payload that triggered this workflow"
+        value: ${{ jobs.prepare.outputs.payload_version }}
 
 jobs:
   prepare:
@@ -42,6 +45,7 @@ jobs:
       version: ${{ steps.out.outputs.version }}
       base_version: ${{ steps.out.outputs.base_version }}
       dispatch_type: ${{ steps.out.outputs.dispatch_type }}
+      payload_version: ${{ steps.out.outputs.payload_version }}
 
     steps:
       - name: Checkout (full history + tags)
@@ -62,16 +66,16 @@ jobs:
           EVENT="${GITHUB_EVENT_NAME}"
           dispatch_type=""
           base_version="latest"
+          payload_version="latest"
 
           if [[ "$EVENT" == "repository_dispatch" ]]; then
             dispatch_type="$(jq -r .action "$GITHUB_EVENT_PATH")"
-
+            payload_version="$(jq -r '.client_payload.version // empty' "$GITHUB_EVENT_PATH")"
+            if [[ -z "${payload_version//[[:space:]]/}" ]]; then
+              echo "Error: ${dispatch_type} requires client_payload.version" >&2
+              exit 1
+            fi
             if [[ "$dispatch_type" == "$VERSIONED_TYPE" ]]; then
-              payload_version="$(jq -r '.client_payload.version // empty' "$GITHUB_EVENT_PATH")"
-              if [[ -z "${payload_version//[[:space:]]/}" ]]; then
-                echo "Error: ${dispatch_type} requires client_payload.version" >&2
-                exit 1
-              fi
               base_version="$payload_version"
             else
               base_version="latest"
@@ -96,6 +100,7 @@ jobs:
             echo "Latest tag on ${MAIN_BRANCH}: ${latest_tag}"
             echo "New tag to create:     ${tag}"
             echo "Base image version:    ${base_version}"
+            echo "Payload version:       ${payload_version}"
 
             # Ensure we're on main HEAD
             git checkout -B "${MAIN_BRANCH}" "origin/${MAIN_BRANCH}"
@@ -123,3 +128,4 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "base_version=${base_version}" >> "$GITHUB_OUTPUT"
+          echo "payload_version=${payload_version}" >> "$GITHUB_OUTPUT"
