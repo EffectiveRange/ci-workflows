@@ -148,7 +148,7 @@ jobs:
             fi
 
       - name: Coverage comment
-        if: ${{ inputs.coverage-enabled && github.event_name == 'pull_request' }}
+        if: ${{ inputs.coverage-enabled }}
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
