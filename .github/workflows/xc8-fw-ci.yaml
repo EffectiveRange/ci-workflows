@@ -93,7 +93,7 @@ jobs:
             make all
             mkdir cmake_build
             cd cmake_build
-            cmake -DCMAKE_BUILD_TYPE=Release ../
+            cmake -DCMAKE_BUILD_TYPE=Debug ../
             cmake --build . -j $(cat /proc/cpuinfo  | grep -E "processor\s*:\s*[0-9]+" | wc -l)
             ctest . --output-on-failure -j --timeout ${{ inputs.test-timeout }}
             if [ $? -ne 0 ]; then

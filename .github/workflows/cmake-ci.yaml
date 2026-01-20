@@ -47,6 +47,11 @@ on:
         type: boolean
         description: 'perform host cleanup to free disk space'
         default: false
+      sanitizers:
+        required: false
+        type: string
+        description: 'json array of sanitizers to run'
+        default: '["asan", "tsan", "ubsan", "debug"]'
     secrets:
       access-token:
         required: false
@@ -68,7 +73,7 @@ jobs:
       token: ${{ secrets.access-token }}
     strategy:
       matrix:
-        sanitizer: [ "asan", "tsan", "ubsan", "debug" ]
+        sanitizer: ${{ fromJson(inputs.sanitizers) }}
     permissions:
       contents: write
       discussions: write
