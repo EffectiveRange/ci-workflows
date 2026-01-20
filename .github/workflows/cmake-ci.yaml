@@ -42,6 +42,11 @@ on:
         type: boolean
         description: 'omit release build'
         default: false
+      host-cleanup:
+        required: false
+        type: boolean
+        description: 'perform host cleanup to free disk space'
+        default: false
     secrets:
       access-token:
         required: false
@@ -68,6 +73,28 @@ jobs:
       contents: write
       discussions: write
     steps:
+      - name: Host cleanup
+        if: ${{ inputs.host-cleanup }}
+        run: |
+            df -h
+            echo "Removing large packages"
+            sudo apt-get remove -y '^dotnet-.*'
+            sudo apt-get remove -y '^llvm-.*'
+            sudo apt-get remove -y 'php.*'
+            sudo apt-get remove -y '^mongodb-.*'
+            sudo apt-get remove -y '^mysql-.*'
+            sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri || true
+            sudo apt-get autoremove -y
+            sudo apt-get clean
+            df -h
+            echo "Removing large directories"
+            sudo rm -rf /usr/share/dotnet/
+            sudo rm -rf /usr/local/graalvm/
+            sudo rm -rf /usr/local/.ghcup/
+            sudo rm -rf /usr/local/share/powershell
+            sudo rm -rf /usr/local/share/chromium
+            sudo rm -rf /usr/local/lib/android
+            df -h
       - name: Checkout with token
         uses: actions/checkout@v5
         if: ${{env.token != ''}}
@@ -96,6 +123,7 @@ jobs:
           configFile: .devcontainer/${{inputs.sanitizer-version}}-container/devcontainer.json
           push: never
           runCmd: |
+            set -euo pipefail
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}" 
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build_${{matrix.sanitizer}}"
@@ -146,6 +174,7 @@ jobs:
           configFile: .devcontainer/${{inputs.sanitizer-version}}-container/devcontainer.json
           push: never
           runCmd: |
+            set -euo pipefail
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build" 
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
