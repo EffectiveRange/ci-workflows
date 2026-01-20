@@ -85,6 +85,7 @@ jobs:
           configFile: .devcontainer/xc8-bookworm-container/devcontainer.json
           push: never
           runCmd: |
+            set -euo pipefail
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build"
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"            
             cd "/workspaces/${{steps.extract.outputs.proj}}"
