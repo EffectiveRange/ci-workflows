@@ -73,9 +73,6 @@ jobs:
             rm -rf  "/workspaces/${{steps.extract.outputs.proj}}/build"
             mkdir "/workspaces/${{steps.extract.outputs.proj}}/build"
             cd "/workspaces/${{steps.extract.outputs.proj}}/build"
-            python3 -m venv .venv
-            source .venv/bin/activate
-            pip install git+https://github.com/EffectiveRange/python-xdrvmake
             xdrvmake ..
             xdrvmake --build .
             DISTRO_VER="$(echo ${{matrix.arch}} | cut -d'-' -f2)_"
