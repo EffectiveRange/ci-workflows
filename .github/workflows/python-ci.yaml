@@ -109,7 +109,7 @@ jobs:
             if [ ${{ inputs.test-architecture }} == "amd64" ]; then
               dpkgdeps -v .
 
-              python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
+              python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
               pip install mypy flake8 pytest pytest-timeout wheel
               pip install .
               if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -159,7 +159,7 @@ jobs:
         if: ${{ inputs.coverage-enabled }}
         id: coverage-gate
         run: |
-          python3 -m venv /tmp/venv && source /tmp/venv/bin/activate
+          python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
           pip install coverage
           coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
