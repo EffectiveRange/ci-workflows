@@ -113,9 +113,9 @@ jobs:
               pip install mypy flake8 pytest pytest-timeout wheel
               pip install .
               if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-              mypy --install-types --non-interactive || true
-              mypy || { echo "mypy exited with $?"; exit 1; }
-              flake8 || { echo "flake exited with $?"; exit 1; }
+              python3 -m mypy --install-types --non-interactive || true
+              python3 -m mypy || { echo "mypy exited with $?"; exit 1; }
+              python3 -m flake8 || { echo "flake exited with $?"; exit 1; }
 
               if [ ${{ inputs.coverage-enabled }} == true ]; then
                 pip install coverage
