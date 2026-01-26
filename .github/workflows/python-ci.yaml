@@ -119,9 +119,9 @@ jobs:
 
               if [ ${{ inputs.coverage-enabled }} == true ]; then
                 pip install coverage
-                coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+                python3 -m coverage run -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
               else
-                pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
+                python3 -m pytest --timeout=${{ inputs.test-timeout }} || { echo "pytest exited with $?"; exit 1; }
               fi
             else
               dpkgdeps -v --arch ${{ inputs.test-architecture }} .
@@ -161,7 +161,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
           pip install coverage
-          coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
+          python3 -m coverage report --show-missing --fail-under=${{ inputs.coverage-threshold }}
 
   build_wheel:
     name: Create wheel package
