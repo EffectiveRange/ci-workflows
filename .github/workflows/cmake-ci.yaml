@@ -214,9 +214,9 @@ jobs:
             fi
             mkdir ../coverage
             cd ../coverage
-            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --lcov coverage.lcov
-            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --html-single-page --html-theme github.dark-green --html-details coverage-report.html
-            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --no-html-self-contained --html coverage-summary.html
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --gcov-ignore-parse-errors=negative_hits.warn --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --lcov coverage.lcov
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --gcov-ignore-parse-errors=negative_hits.warn --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --html-single-page --html-theme github.dark-green --html-details coverage-report.html
+            gcovr  --root .. -e "../test.*"  -e "../build.*" $([ -f ../exclude-coverage.txt ] && awk '{printf "-e ../%s ", $0}' ../exclude-coverage.txt) --gcov-ignore-parse-errors=negative_hits.warn --exclude-throw-branches --exclude-noncode-lines --exclude-function-lines --exclude-unreachable-branches --no-html-self-contained --html coverage-summary.html
             markdownify coverage-summary.html > coverage-summary.md
             sed -i -e 's/| File | Lines | | | Functions | | Branches | |/| File | Lines | | Functions | | Branches ||\n| --- | --- | --- | --- | --- | --- | --- |/' coverage-summary.md
 
