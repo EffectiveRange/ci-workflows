@@ -101,7 +101,7 @@ jobs:
             sudo rm -rf /usr/local/lib/android
             df -h
       - name: Checkout with token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token != ''}}
         with:
           submodules: true
@@ -109,7 +109,7 @@ jobs:
           fetch-tags: true
 
       - name: Checkout with default token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token == ''}}
         with:
           submodules: true
@@ -175,14 +175,14 @@ jobs:
             sudo rm -rf /usr/local/lib/android
             df -h
       - name: Checkout with token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token != ''}}
         with:
           submodules: true
           token: ${{ secrets.access-token }}
           fetch-tags: true
       - name: Checkout with default token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token == ''}}
         with:
           submodules: true
@@ -266,7 +266,7 @@ jobs:
       token: ${{ secrets.access-token }}
     steps:
       - name: Checkout with token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token != ''}}
         with:
           submodules: true
@@ -274,7 +274,7 @@ jobs:
           fetch-tags: true
 
       - name: Checkout with default token
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{env.token == ''}}
         with:
           submodules: true
