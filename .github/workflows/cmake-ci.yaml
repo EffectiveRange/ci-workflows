@@ -107,6 +107,7 @@ jobs:
           submodules: true
           token: ${{ secrets.access-token }}
           fetch-tags: true
+          fetch-depth: 0
 
       - name: Checkout with default token
         uses: actions/checkout@v5
@@ -114,6 +115,7 @@ jobs:
         with:
           submodules: true
           fetch-tags: true
+          fetch-depth: 0
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
 
@@ -181,12 +183,14 @@ jobs:
           submodules: true
           token: ${{ secrets.access-token }}
           fetch-tags: true
+          fetch-depth: 0
       - name: Checkout with default token
         uses: actions/checkout@v5
         if: ${{env.token == ''}}
         with:
           submodules: true
           fetch-tags: true
+          fetch-depth: 0
 
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
@@ -272,6 +276,7 @@ jobs:
           submodules: true
           token: ${{ secrets.access-token }}
           fetch-tags: true
+          fetch-depth: 0
 
       - name: Checkout with default token
         uses: actions/checkout@v5
@@ -279,6 +284,7 @@ jobs:
         with:
           submodules: true
           fetch-tags: true
+          fetch-depth: 0
 
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
