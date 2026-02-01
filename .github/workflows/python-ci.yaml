@@ -153,7 +153,7 @@ jobs:
         if: ${{ inputs.coverage-enabled }}
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Enforce minimum coverage
         if: ${{ inputs.coverage-enabled }}
