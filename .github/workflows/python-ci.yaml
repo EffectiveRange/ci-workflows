@@ -42,6 +42,11 @@ on:
         type: boolean
         default: true
         description: 'Should run with coverage?'
+      coverage-comment-enabled:
+        required: false
+        type: boolean
+        default: true
+        description: 'Should post coverage comment?'
       coverage-threshold:
         required: false
         type: number
@@ -157,7 +162,7 @@ jobs:
 
 
       - name: Coverage comment
-        if: ${{ inputs.coverage-enabled }}
+        if: ${{ inputs.coverage-enabled && inputs.coverage-comment-enabled }}
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
