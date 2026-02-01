@@ -100,7 +100,6 @@ jobs:
         with:
           submodules: true
           token: ${{ env.GITHUB_TOKEN_TO_USE }}
-          persist-credentials: false
 
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
