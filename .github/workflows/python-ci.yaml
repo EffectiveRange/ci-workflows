@@ -155,12 +155,6 @@ jobs:
               fi
             fi
 
-      - name: Configure git credentials for coverage
-        if: ${{ inputs.coverage-enabled && env.GITHUB_TOKEN_TO_USE != github.token }} 
-        run: |
-          git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "https://github.com/"
-
-
       - name: Coverage comment
         if: ${{ inputs.coverage-enabled && inputs.coverage-comment-enabled }}
         uses: py-cov-action/python-coverage-comment-action@v3
