@@ -25,7 +25,7 @@ on:
       test-distribution:
         required: false
         type: string
-        default: 'bookworm'
+        default: 'trixie'
         description: 'Distribution to use for running tests'
       test-overlay:
         required: false
