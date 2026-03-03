@@ -366,7 +366,7 @@ jobs:
           git tag -fa latest -m "Latest release"
           git push origin latest --force
         env:
-          GITHUB_TOKEN_TO_USE: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v5
