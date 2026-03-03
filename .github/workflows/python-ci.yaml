@@ -72,6 +72,11 @@ on:
         type: string
         default: 'wheel, fpm-deb'
         description: 'Packaging types'
+      tag-latest:
+        required: false
+        type: boolean
+        default: true
+        description: 'Should tag the latest commit with "latest" tag?'
     secrets:
       access-token:
         required: false
@@ -359,14 +364,15 @@ jobs:
 
       - name: Tag latest
         shell: bash
+        if: ${{ inputs.tag-latest }}
         run: |
-          COMMIT_SHA=$(git rev-parse HEAD)
-          gh api "repos/${GITHUB_REPOSITORY}/git/refs/tags/latest" \
-            --method PATCH -F force=true -f sha="${COMMIT_SHA}" ||
-          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
-            --method POST -f ref="refs/tags/latest" -f sha="${COMMIT_SHA}"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git tag -fa latest -m "Latest release"
+          git push origin latest --force
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN_TO_USE: ${{ github.token }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v5
