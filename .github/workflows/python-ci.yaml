@@ -169,7 +169,7 @@ jobs:
 
   build_wheel:
     name: Create wheel package
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'wheel')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(format(',{0},', inputs.package-type), ',wheel,')
     needs: test
     runs-on: ubuntu-latest
     permissions:
