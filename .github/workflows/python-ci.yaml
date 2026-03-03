@@ -364,7 +364,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
           git tag -fa latest -m "Latest release"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN_TO_USE}@github.com/${GITHUB_REPOSITORY}.git"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin latest --force
 
       - name: Download artifacts
