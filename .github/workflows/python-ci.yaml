@@ -126,7 +126,7 @@ jobs:
 
               python3 -m venv --system-site-packages /tmp/venv && source /tmp/venv/bin/activate
               pip install mypy flake8 pytest pytest-timeout wheel pytest-console-scripts
-              if [ ${{ inputs.build-isolation }} ]; then
+              if [ ${{ inputs.build-isolation }} == true ]; then
                 pip install -v .
               else
                 pip install -v --no-build-isolation .
@@ -151,7 +151,7 @@ jobs:
 
               sudo schroot -p -c buildroot -- python3 -m venv --system-site-packages /tmp/venv
               sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install mypy flake8 pytest pytest-timeout wheel pytest-console-scripts
-              if [ ${{ inputs.build-isolation }} ]; then
+              if [ ${{ inputs.build-isolation }} == true ]; then
                 sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install -v .
               else
                 sudo schroot -p -c buildroot -- /tmp/venv/bin/pip install -v --no-build-isolation .
