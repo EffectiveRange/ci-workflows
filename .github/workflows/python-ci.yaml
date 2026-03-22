@@ -109,9 +109,6 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Check APT repository
-        uses: EffectiveRange/ci-workflows/.github/workflows/apt-repository-check.yaml@main
-
       - name: Checkout with submodules
         uses: actions/checkout@v5
         with:
