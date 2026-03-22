@@ -96,7 +96,12 @@ env:
 
 jobs:
   check-apt-repository:
-    uses: EffectiveRange/ci-workflows/.github/workflows/apt-repository-check.yaml@main
+    name: Check APT repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check repository connectivity
+        run: |
+          wget -O- https://raw.githubusercontent.com/EffectiveRange/infrastructure-configuration/refs/heads/main/aptrepo/repository/check_repo.sh | sudo /bin/bash
 
   test:
     name: Run tests
