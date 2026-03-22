@@ -95,9 +95,13 @@ env:
   GITHUB_ACTION: "TRUE"
 
 jobs:
+  check-apt-repository:
+    uses: EffectiveRange/ci-workflows/.github/workflows/apt-repository-check.yaml@main
+
   test:
     name: Run tests
     if: ${{ inputs.test-enabled }}
+    needs: check-apt-repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -191,7 +195,7 @@ jobs:
   build_wheel:
     name: Create wheel package
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(format(',{0},', inputs.package-type), ',wheel,')
-    needs: test
+    needs: [test, check-apt-repository]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -225,7 +229,7 @@ jobs:
   build_wheel-deb:
     name: Create debian package with wheel and venv
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'wheel-deb')
-    needs: test
+    needs: [test, check-apt-repository]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -273,7 +277,7 @@ jobs:
   build_fpm-deb:
     name: Create debian package with FPM
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'fpm-deb')
-    needs: test
+    needs: [test, check-apt-repository]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -315,7 +319,7 @@ jobs:
   build_dh-virtualenv:
     name: Create debian package with dh-virtualenv
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && contains(inputs.package-type, 'dh-virtualenv')
-    needs: test
+    needs: [test, check-apt-repository]
     runs-on: ubuntu-latest
     strategy:
       matrix:
