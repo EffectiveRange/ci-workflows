@@ -1,0 +1,18 @@
+name: CI/CD
+
+on:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check APT repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check repository connectivity
+        run: |
+          wget -O- https://raw.githubusercontent.com/EffectiveRange/infrastructure-configuration/refs/heads/main/aptrepo/repository/check_repo.sh | sudo /bin/bash
