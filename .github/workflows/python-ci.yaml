@@ -379,13 +379,13 @@ jobs:
         shell: bash
         if: ${{ inputs.tag-latest }}
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          git tag -fa latest -m "Latest release"
-          git push origin latest --force
+          COMMIT_SHA=$(git rev-parse HEAD)
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs/tags/latest" \
+            --method PATCH -F force=true -f sha="${COMMIT_SHA}" ||
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            --method POST -f ref="refs/tags/latest" -f sha="${COMMIT_SHA}"
         env:
-          GITHUB_TOKEN_TO_USE: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v5
